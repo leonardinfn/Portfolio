@@ -1,0 +1,71 @@
+def tem_espaco(senha):
+    if ' ' in senha:
+        print('\033[91mX SUA SENHA CONTÉM ESPAÇO\033[0m')
+        return True
+    print('\033[92m CERTO, SUA SENHA NÃO CONTÉM ESPAÇOS\033[0m')
+    return False
+
+def letra_maiuscula(senha):
+    for caractere in senha:
+        if caractere.isupper():
+            print('\033[92m CERTO, SUA SENHA CONTÉM PELO MENOS UMA LETRA MAIÚSCULA\033[0m')
+            return True
+    print('\033[91mX SUA SENHA NÃO CONTÉM LETRA MAIÚSCULA\033[0m')
+    return False
+
+def letra_minuscula(senha):
+    for caractere in senha:
+        if caractere.islower():
+            print('\033[92m CERTO, SUA SENHA CONTÉM PELO MENOS UMA LETRA MINÚSCULA\033[0m')
+            return True
+    print('\033[91mX SUA SENHA NÃO CONTÉM LETRA MINUSCULA\033[0m')
+    return False
+
+def tem_numeros(senha):
+    for caractere in senha:
+        if caractere.isdigit():
+            print('\033[92m CERTO, SUA SENHA CONTÉM PELO MENOS UM NUMERO\033[0m')
+            return True
+    print('\033[91mX SUA SENHA NÃO CONTÉM NENHUM NUMERO\033[0m')
+    return False
+
+def tamanho(senha):
+    tamanho = len(senha)
+    if 6 <= tamanho <= 16:
+        print('\033[92m CERTO, SUA SENHA TEM UM TAMANHO IDEAL\033[0m')
+        return True
+    print('\033[91mX TAMANHO DE SENHA NÃO ACEITO\033[0m')
+    return False
+
+def caractere_especial(senha):
+    caracteres_especiais = ['*', '#', '@', '$', '%', '&']
+    for caractere in senha:
+        if caractere in caracteres_especiais:
+            print('\033[92m CERTO, SUA SENHA TEM PELO MENOS UM CARACTERE ESPECIAL\033[0m')
+            return True
+    print('\033[91mX SUA SENHA NÃO CONTÉM NENHUM CARACTERE ESPECIAL\033[0m')
+    return False
+
+senha = input('Digite sua nova senha: ')
+
+while True:
+    i = 0
+    if not tem_espaco(senha):
+        i += 1
+    if letra_maiuscula(senha):
+        i += 1
+    if letra_minuscula(senha):
+        i += 1
+    if tem_numeros(senha):
+        i += 1
+    if tamanho(senha):
+        i += 1
+    if caractere_especial(senha):
+        i += 1
+
+    if i == 6:
+        print('\033[92mSua senha é forte!\033[0m')
+        break
+    else:
+        print('\033[91mSua senha não é forte o suficiente. Por favor, siga as orientações.\033[0m')
+        senha = input('Digite sua nova senha novamente: ')
