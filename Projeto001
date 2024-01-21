@@ -1,0 +1,95 @@
+'''Mercearia do Seu João'''
+def procurar_produto(produto):
+    with open("estoque.txt", 'r') as estoque:
+        for linha in estoque:
+            produto_arquivo, _ = linha.strip().split(',')
+            if produto == produto_arquivo:
+                return 1
+    return 0
+def verificar_produtos_no_estoque(produtos):
+    for produto in produtos:
+        if not procurar_produto(produto):
+            return False
+    return True
+def produto_novo(item_novo):
+    with open("estoque.txt", 'a') as estoque:
+        for produto, quantidade in item_novo:
+            estoque.write(f"{produto},{quantidade}\n")
+
+def ver_estoque():
+        with open("estoque.txt", 'r') as estoque:
+            for linha in estoque:
+                produto, quantidade = linha.strip().split(',')
+                print(f'{produto}: {quantidade}')
+        print()
+def pop(produto, quantidade):
+    with open("estoque.txt", 'r') as estoque:
+        linhas = estoque.readlines()
+
+    with open("estoque.txt", 'w') as novo_estoque:
+        for linha in linhas:
+            produto_arq, quantidade_arq = linha.strip().split(',')
+            if produto_arq == produto:
+                quantidade_arq = int(quantidade_arq)
+                if quantidade_arq > quantidade:
+                    quantidade_arq -= quantidade
+                    novo_estoque.write(f'{produto_arq},{quantidade_arq}\n')
+                    print(
+                        f'{quantidade} unidades de {produto} removidas do estoque. Quantidade restante: {quantidade_arq}')
+                else:
+                    print(f'Todo o estoque de {produto} foi removido.')
+            else:
+                novo_estoque.write(f'{linha}')
+
+while True:
+    n = int(input('\033[91mMercearia do Seu João\033[0m\n[1]: Realizar venda\n[2]: Adicionar produto ao estoque\n[3]: Ver estoque\n[4]: Tirar produto do estoque \n[5]: Sair \n '))
+    i = 0
+    if n == 1:
+        ver_estoque()
+        entrada_produto = input('Digite o nome do produto a ser vendido[Se for mais de um separe em virgulas].').lower().split(',')
+        entrada_produto = [entrada.strip() for entrada in entrada_produto]
+        while not verificar_produtos_no_estoque(entrada_produto):
+            entrada_produto = input(
+                'Um ou mais produtos não encontrados no estoque. Digite novamente o(s) produto(s) ou "sair" para sair. ').lower().split(
+                ',')
+            entrada_produto = [entrada.strip() for entrada in entrada_produto]
+
+            if "sair" in entrada_produto:
+                break
+
+        if "sair" in entrada_produto:
+            break
+        qtd_entrada = input('Informe a quantidade respectiva dos produtos digitados(Se for mais de um separar com virgula): ').split(',')
+        qtd_num_entrada = [int(num) for num in qtd_entrada]
+        while len(entrada_produto) != len(qtd_num_entrada):
+            qtd_entrada = input('Não bate o número de produtos cadastrados com a quantidade digitada, informe novamentea quantidade respectiva dos produtos digitados(Se for mais de um separar com virgula):  ').split(',')
+        for vendas in entrada_produto:
+            pop(vendas, qtd_num_entrada[i])
+            i+=1
+        print(f'Você vendeu {qtd_entrada} {entrada_produto}.')
+
+    elif n == 2:
+        item_novo = input('Nome do(s) produto(s) (Se for mais de um separar com virgula): ').lower().split(',')
+        qtd_item = input('Informe a quantidade respectiva dos produtos digitados(Se for mais de um separar com virgula): ').split(',')
+        while len(qtd_item) != len(item_novo):
+            qtd_item = input('Não bate o número de produtos cadastrados com a quantidade digitada, informe novamentea quantidade respectiva dos produtos digitados(Se for mais de um separar com virgula):  ').split(',')
+        item_novo = [produto.strip() for produto in item_novo]
+        qtd_num_item = [int(numeros) for numeros in qtd_item]
+        duas_listas = zip(item_novo, qtd_num_item)
+        produto_novo(list(duas_listas))
+
+    elif n == 3:
+            ver_estoque()
+
+    elif n == 4:
+        remove_estoque = input('Digite o nome do item a ser removido do estoque: ').lower().strip()
+        quantidade_remover = int(input('Digite a quantidade a ser removida: '))
+        pop(remove_estoque, quantidade_remover)
+
+    elif n == 5:
+        break
+
+    else:
+        print('Opção inválida. Digite novamente.')
+
+
