@@ -1,0 +1,475 @@
+#include<stdio.h>
+#include<stdlib.h>
+
+typedef struct arvore{
+    int info;
+    int FB;
+    struct arvore *esq;
+    struct arvore *dir;
+}arvore;
+
+void AjustarFB(arvore* a){
+    if(a!=NULL){
+    int he = altura(a->esq);
+    int hd = altura(a->dir);
+    a->FB = hd -he;
+
+    AjustarFB(a->esq);
+    AjustarFB(a->dir);
+}}
+
+arvore *LerArvore(FILE *arq){
+  char c;
+  int n;
+  fscanf(arq,"%c",&c);
+  fscanf(arq,"%d",&n);
+  if(n==-1){
+    fscanf(arq,"%c",&c);
+    return NULL;
+  }
+  else{
+    arvore *a = (arvore*)malloc(sizeof(arvore));
+    a->info= n;
+    a->esq = LerArvore(arq);
+    a->dir = LerArvore(arq);
+    fscanf(arq,"%c",&c);
+    return a;
+  }
+}
+
+arvore *LerAVL(FILE *arq){
+    arvore *a = LerArvore(arq);
+    AjustarFB(a);
+    return a;}
+
+arvore *RotacaoEsqSimples(arvore *r) {
+
+    arvore *a = r;
+    arvore *b=a->dir;
+    a->dir = b->esq;
+    b->esq = a;
+    if (b->FB == 1){
+         a->FB = 0;
+         b->FB = 0;}
+    else{
+         a->FB = 1;
+         b->FB = -1;}
+    r=b;
+    return r;
+}
+
+arvore *RotacaoEsqDupla(arvore *r){
+
+    arvore *a = r;
+    arvore *c = a->dir;
+    arvore *b = c->esq;
+    c->esq = b->dir;
+    a->dir = b->esq;
+    b->esq = a;
+    b->dir = c;
+
+     switch(b->FB){
+     case -1:
+         a->FB = 0;
+         c->FB = 1;
+         break;
+     case 0:
+         a->FB = 0;
+         c->FB = 0;
+         break;
+     case +1:
+         a->FB = -1;
+         c->FB = 0;
+         break;
+     }
+    b->FB = 0;
+
+    r = b;
+    return r;
+}
+
+arvore *RotacaoEsq(arvore *r) {
+    if (r->dir->FB == -1){
+        r = RotacaoEsqDupla(r);}
+    else{
+        r = RotacaoEsqSimples(r);}
+
+ return r;
+}
+
+
+arvore *RotacaoDirSimples(arvore *r) {
+
+    arvore *a = r->esq;
+    arvore *b = r;
+    b->esq = a->dir;
+    a->dir = b;
+    if (a->FB == -1){
+     a->FB = 0;
+     b->FB = 0;
+    }
+    else{
+     a->FB = 1;
+     b->FB = -1;
+    }
+    r = a;
+    return r;
+}
+
+arvore *RotacaoDirDupla(arvore *r) {
+
+    arvore *c = r;
+    arvore *a = c->esq;
+    arvore *b = a->dir;
+    c->esq = b->dir;
+    a->dir = b->esq;
+    b->esq = a;
+    b->dir = c;
+    switch(b->FB){
+    case -1:
+     a->FB = 0;
+     c->FB = 1;
+     break;
+    case 0:
+     a->FB = 0;
+     c->FB = 0;
+     break;
+    case +1:
+     a->FB = -1;
+     c->FB = 0;
+     break;
+    }
+    b->FB = 0;
+    r = b;
+    return r;
+}
+
+arvore *RotacaoDir(arvore *r) {
+    if (r->esq->FB == 1){
+      r = RotacaoDirDupla(r);}
+    else{
+      r = RotacaoDirSimples(r);}
+
+    return r;
+}
+
+
+void ImprimirArvore(arvore *a,int opc){
+  if(opc==1){
+    if(a!=NULL){
+      printf("%d ", a->info);
+      ImprimirArvore(a->esq,opc);
+      ImprimirArvore(a->dir,opc);
+    }}
+    else if(opc==2){
+    if(a!=NULL){
+      ImprimirArvore(a->esq,opc);
+      ImprimirArvore(a->dir,opc);
+      printf("%d ", a->info);
+    }}
+    else{
+    if(a!=NULL){
+      ImprimirArvore(a->esq,opc);
+      printf("%d ", a->info);
+      ImprimirArvore(a->dir,opc);
+    }}
+}
+void ImprimirEmLargura(arvore *a, int nivel_atual, int nivel_maximo) {
+    if (a != NULL) {
+        if (nivel_atual == nivel_maximo) {
+            printf("%d ", a->info);
+        }
+        ImprimirEmLargura(a->esq, nivel_atual + 1, nivel_maximo);
+        ImprimirEmLargura(a->dir, nivel_atual + 1, nivel_maximo);
+    }
+}
+int ExisteElemento(arvore* a, int n){
+  if(a==NULL){
+    return 0;
+  }
+    else if(a->info==n){
+      return 1;
+    }
+    else if(n<a->info){
+        return ExisteElemento(a->esq, n);
+    }
+    else{
+        return ExisteElemento(a->dir, n);
+  }
+}
+
+void ImprimirFolhas(arvore* a, int n) {
+    if (a == NULL) {
+        return;
+    } else if (a->info < n) {
+        if (a->dir == NULL && a->esq == NULL) {
+            printf("%d ", a->info);
+        }
+        ImprimirFolhas(a->esq, n);
+        ImprimirFolhas(a->dir, n);
+    }
+      else{
+        ImprimirFolhas(a->esq, n);
+      }
+}
+
+arvore *Inserir(arvore *r, int x, int *hMudou){
+    if (r == NULL) {
+        r = (arvore*) malloc (sizeof(arvore));
+        r->info = x;
+        r->esq = NULL;
+        r->dir = NULL;
+        r->FB = 0;
+        *hMudou = 1;
+    }
+    else{
+        if(x <= r->info) {
+            r->esq = Inserir (r->esq,x,hMudou);
+        if(*hMudou == 1) {
+            switch (r->FB){
+            case -1:
+                r = RotacaoDir(r);
+                *hMudou = 0;
+                break;
+            case 0:
+                r->FB = -1;
+                *hMudou = 1;
+                break;
+            case +1:
+                r->FB = 0;
+                *hMudou = 0;
+                break;}}}
+        else{
+            r->dir = Inserir (r->dir,x,hMudou);
+            if (*hMudou == 1)
+            {
+                switch (r->FB)
+                {
+                case -1:
+                    r->FB = 0;
+                    *hMudou = 0;
+                    break;
+                case 0:
+                    r->FB = +1;
+                    *hMudou = 1;
+                    break;
+                case +1:
+                    r = RotacaoEsq (r);
+                    *hMudou = 0;
+                    break; }}}}
+
+    return r;}
+
+arvore *Remover(arvore *r, int x, int *hMudou){
+    if (r != NULL){
+    if (r->info == x){
+        if (r->esq == NULL && r->dir == NULL){
+            free (r);
+            *hMudou = 1;
+            return NULL;
+        }
+        else if (r->esq == NULL || r->dir == NULL){
+            arvore *aux;
+            if (r->esq == NULL)
+            aux = r->dir;
+            else
+            aux = r->esq;
+            free(r);
+            *hMudou = 1;
+            return aux;
+}
+        else{
+            arvore *maiorEsq = r->esq;
+            while (maiorEsq->dir != NULL)
+            maiorEsq = maiorEsq->dir;
+
+            r->info = maiorEsq->info;
+            r->esq = Remover(r->esq,r->info,hMudou);
+            if (*hMudou == 1){
+                switch(r->FB){
+                case -1:
+                    r->FB = 0;
+                    *hMudou = 1;
+                    break;
+                case 0:
+                    r->FB = 1;
+                    *hMudou = 0;
+                    break;
+                case +1:{
+                    int aux = r->dir->FB;
+                    r = RotacaoEsq(r);
+                    if (aux == 0)
+                        *hMudou = 0;
+                    else
+                        *hMudou = 1;
+                    break;
+                    }
+                    }
+            }
+        }
+    }
+    else if (x < r->info){
+        r->esq = Remover(r->esq, x, hMudou);
+        if (*hMudou == 1){
+        switch(r->FB){
+            case -1:
+                r->FB = 0;
+                *hMudou = 1;
+                break;
+            case 0:
+                r->FB = 1;
+                *hMudou = 0;
+                break;
+            case +1:{
+                int aux = r->dir->FB;
+                r = RotacaoEsq(r);
+                if (aux == 0)
+                    *hMudou = 0;
+                else
+                    *hMudou = 1;
+                break;
+                }
+            }
+        }
+        }
+    else{
+        r->dir = Remover(r->dir, x, hMudou);
+        if (*hMudou == 1){
+            switch(r->FB){
+                case +1:
+                    r->FB = 0;
+                    *hMudou = 1;
+                    break;
+                case 0:
+                    r->FB = -1;
+                    *hMudou = 0;
+                    break;
+                case -1:{
+                    int aux = r->esq->FB;
+                    r = RotacaoDir(r);
+                    if (aux == 0)
+                        *hMudou = 0;
+                    else
+                        *hMudou = 1;
+                    break;
+            }
+            }
+        }
+    }
+    return r;
+}
+}
+
+int altura(arvore*a){
+  if(a==NULL){
+    return 0;
+  }
+  else{
+    int he = altura(a->esq);
+    int hd = altura(a->dir);
+    if(he>hd){
+      return he+1;
+    }
+    else{
+      return hd+1;
+    }
+  }
+}
+
+void ImprimirNivel(arvore*a, int cont, int x){
+  if(a!=NULL){
+    if(a->info == x){
+      printf("Nível: %d ", cont);
+    }
+    else{
+    ImprimirNivel(a->dir, cont+1, x);
+    ImprimirNivel(a->esq, cont+1, x);
+  }}
+}
+
+void FreeArv(arvore*a){
+  if(a==NULL){
+    return;
+  }
+  else{
+    FreeArv(a->esq);
+    FreeArv(a->dir);
+    free(a);
+  }
+}
+
+int main(){
+    arvore*a;
+    FILE*arq;
+    int modo, n, x, alt, elemento;
+    int hMudou = 0;
+  while(1){
+    printf("-----------MENU-----------\n[1]Ler árvore de um arquivo\n[2]Imprimir a árvore\n[3]Verificar se elemento x existe na árvore\n[4]Imprimir o nível de um nó x.\n[5]Imprimir as folhas menores que um valor x\n[6]Inserir um nó x na árvore\n[7]Remover um nó x da árvore.\n[8]Sair\n");
+    scanf("%d", &n);
+    while(n > 8 || n < 1){
+      scanf("%d", &n);
+    }
+    if(n == 8){
+      FreeArv(a);
+      break;
+    }
+    switch(n)
+    {
+    case 1:
+      arq = fopen("arvore.txt", "rt");
+      a = LerAVL(arq);
+      fclose(arq);
+      break;
+    case 2:
+      printf("[1]Pre-ordem\n[2]Pós-ordem\n[3]Em-ordem\n[4]Em largura\n");
+      scanf("%d", &modo);
+      while(modo > 4 || modo < 1){
+        scanf("%d", &modo);
+      }
+      if(modo>=1&&modo<=3){
+        ImprimirArvore(a,modo);
+      }
+      else{
+        alt = altura(a);
+        for (int i = 1; i <= alt; i++) {
+          printf("Nível %d: ", i-1);
+          ImprimirEmLargura(a, 1, i);
+          printf("\n");
+      }}
+      printf("\n");
+      break;
+    case 3:
+      printf("Qual elemento quer procurar?\n");
+      scanf("%d", &x);
+      elemento = ExisteElemento(a,x);
+      if(elemento ==1){
+        printf("Elemento existente na árvore.\n");
+      }
+      else{
+        printf("Elemento não existente\n");
+      }
+      break;
+    case 4:
+      printf("Quer imprimir o nível de que nó? ");
+      scanf("%d",&x);
+      ImprimirNivel(a, 0, x);
+      break;
+    case 5:
+        printf("A partir de qual valor você quer imprimir as folhas menores?");
+        scanf("%d",&x);
+        ImprimirFolhas(a, x);
+        printf("\n");
+      break;
+    case 6:
+      printf("Qual valor quer inserir? ");
+      scanf("%d",&x);
+      a = Inserir(a, x, &hMudou);
+      break;
+    case 7:
+      printf("Que elemento você quer remover? ");
+      scanf("%d",&x);
+      a = Remover(a, x, &hMudou);
+      break;
+    }
+    }
+}
