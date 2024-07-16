@@ -1,0 +1,118 @@
+#include<stdio.h>
+#include<stdlib.h>
+#define N 100
+
+int heap[N];
+int totalElementos = 0;
+
+int indiceFilhoEsq(int x){
+    int indice = (2*x )+1;
+    if(x>=totalElementos || indice>=totalElementos){
+        return -1;}
+    else{
+        return indice;
+    }
+}
+
+int indiceFilhoDir(int x){
+    int indice = (2*x )+2;
+    if(x>=totalElementos || indice>=totalElementos){
+        return -1;}
+    else{
+        return indice;
+    }
+}
+
+int indicePai(int x){
+    int indice = floor((x-1)/2);
+    if(x<=0 || x>=totalElementos){
+        return -1;}
+    else{
+        return indice;
+    }
+}
+
+void AjustarSubindo(int *heap, int pos){
+    if(pos!=-1){
+        int pai = indicePai(pos);
+        if(pai != -1){
+            if(heap[pos]>heap[pai]){
+                int aux = heap[pos];
+                heap[pos]= heap[pai];
+                heap[pai] = aux;
+                AjustarSubindo(heap, pai);
+            }
+        }
+    }
+}
+
+void AjustarDescendo(int *heap, int pos){
+    if(pos != -1 && indiceFilhoEsq(pos)!=-1){
+        int indiceMaiorFilho = indiceFilhoEsq(pos);
+        if(indiceFilhoDir(pos)!=-1 && heap[indiceFilhoDir(pos)]>heap[indiceMaiorFilho]){
+            indiceMaiorFilho = indiceFilhoDir(pos);
+        }
+        if(heap[indiceMaiorFilho]>heap[pos]){
+            int aux = heap[pos];
+            heap[pos]= heap[indiceMaiorFilho];
+            heap[indiceMaiorFilho]= aux;
+            AjustarDescendo(heap, indiceMaiorFilho);}
+    }
+}
+
+void Inserir(int *heap, int x){
+    heap[totalElementos]= x;
+    totalElementos++;
+
+    AjustarSubindo(heap, totalElementos-1);}
+
+
+int Remover(int *heap){
+    if(totalElementos==0){
+        return -1;
+    }
+    else{
+        int retorno = heap[0];
+        heap[0] = heap[totalElementos-1];
+        totalElementos--;
+        AjustarDescendo(heap,0);
+        return retorno;
+    }
+}
+
+int main(){
+    int n, opc;
+
+    while(1){
+    printf("-----------MENU-----------\n[1]Inserir elemento na heap\n[2]Remover um elemento\n[3]Imprimir a heap\n[4]Sair\n");
+    scanf("%d", &opc);
+
+    while(opc > 4 || opc < 1){
+      scanf("%d", &opc);
+    }
+    if(opc ==4){
+        for(int i = totalElementos-1; i>=0; i--){
+            free(heap[i]);
+        }
+      break;
+    }
+    switch(opc)
+    {
+    case 1:
+      printf("Valor a ser inserido\n");
+      scanf("%d", &n);
+      Inserir(heap, n);
+      break;
+    case 2:
+      n = Remover(heap);
+      printf("Valor removido: %d\n", n);
+      break;
+    case 3:
+      for(int i = 0; i<totalElementos; i++){
+        printf("%d ", heap[i]);
+      }
+      printf("\n");
+      break;
+    }
+}
+}
