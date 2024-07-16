@@ -1,0 +1,144 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#define N 10
+
+typedef struct {
+    int mat;
+    char nome[100];
+    char curso[50];
+    int disponibilidade;
+}Aluno;
+
+int hash(int key, int size) {
+    key = key % 1000;
+    return key % size;
+}
+
+void inicializar(char *arqA) {
+    FILE *arq = fopen(arqA, "wb");
+    Aluno a;
+    int i;
+    a.disponibilidade = 1;
+    for (i = 0; i < N; i++) {
+        fwrite(&a,sizeof(Aluno),1,arq);
+    }
+    fclose(arq);
+}
+
+void imprimirTabelaDispersao(char *arqA) {
+    FILE *arq = fopen(arqA, "rb");
+    Aluno a;
+    printf("Posicao\tMatricula\tNome\tCurso\tDisponibilidade\n");
+    for (int i = 0; i < N; i++) {
+        fseek(arq, i * sizeof(Aluno), SEEK_SET);
+        fread(&a, sizeof(Aluno), 1, arq);
+        printf("%d\t%d\t\t%s\t%s\t", i, a.mat, a.nome, a.curso);
+        if (a.disponibilidade == 1) {
+            printf("Disponivel\n");
+        } else {
+            printf("Ocupado\n");
+        }
+    }
+
+    fclose(arq);
+}
+
+void inserir(char *arqA, int x, char *nome, char *curso){
+    int pos = acharPosicao(arqA, x);
+    FILE *arq = fopen(arqA, "r+b");
+    Aluno a;
+    a.mat = x;
+    strcpy(a.nome, nome);
+    strcpy(a.curso, curso);
+    a.disponibilidade = 0;
+    fseek(arq, pos*sizeof(Aluno), SEEK_SET);
+    fwrite(&a, sizeof(Aluno), 1, arq);
+    fclose(arq);
+}
+
+int acharPosicao(char *arqA, int x){
+    int pos = hash(x, N);
+    Aluno a;
+    FILE *arq = fopen(arqA, "rb");
+    fseek(arq, pos*sizeof(Aluno),SEEK_SET);
+    fread(&a, sizeof(Aluno), 1, arq);
+    while(a.disponibilidade == 0){
+        pos = (pos + 1) % N;
+        fseek(arq, pos*sizeof(Aluno), SEEK_SET);
+        fread(&a, sizeof(Aluno), 1, arq);
+    }
+    fclose(arq);
+    return pos;
+}
+
+Aluno procurarAluno(char *arqA, int matricula) {
+    FILE *arq = fopen(arqA, "rb");
+    Aluno aluno;
+    int pos = hash(matricula, N);
+    fseek(arq, pos * sizeof(Aluno), SEEK_SET);
+    fread(&aluno, sizeof(Aluno), 1, arq);
+
+    while(aluno.mat != matricula || aluno.disponibilidade == 1){
+        pos = (pos + 1) % N;
+        fseek(arq, pos * sizeof(Aluno), SEEK_SET);
+        fread(&aluno, sizeof(Aluno), 1, arq);
+    }
+
+    fclose(arq);
+    return aluno;
+}
+
+int main(){
+    int n, opc;
+    char nome[100], curso[50];
+    FILE *a = fopen("alunos.dat", "r+b");
+    inicializar("alunos.dat");
+
+    while (1) {
+        printf("-----------MENU-----------\n[1] Inserir novo aluno\n[2] Imprimir informacoes de aluno\n[3] Imprimir tabela de dispersao\n[4] Sair\n");
+        scanf("%d", &opc);
+
+        while (opc > 4 || opc < 1) {
+            printf("Opcao invalida, escolha novamente: ");
+            scanf("%d", &opc);
+        }
+
+        if (opc == 4) {
+            break;
+        }
+
+        switch (opc) {
+            case 1:
+                printf("Matricula (8 digitos): ");
+                scanf("%d", &n);
+                while(n<10000000||n>99999999){
+                    printf("Matricula (8 digitos): ");
+                    scanf("%d", &n);
+                }
+                printf("Nome: ");
+                scanf("%s", nome);
+                printf("Curso: \n");
+                scanf("%s", curso);
+                inserir("alunos.dat", n, nome, curso);
+                break;
+            case 2:
+                printf("Matricula do aluno a ser encontrado: ");
+                scanf("%d", &n);
+                Aluno alunoEncontrado = procurarAluno("alunos.dat", n);
+                if (alunoEncontrado.disponibilidade == 0) {
+                    printf("Nome: %s\n", alunoEncontrado.nome);
+                    printf("Matricula: %d\n", alunoEncontrado.mat);
+                    printf("Curso: %s\n", alunoEncontrado.curso);
+                } else {
+                    printf("Aluno nao encontrado.\n");
+                }
+                break;
+            case 3:
+                printf("Tabela de dispersao:\n");
+                imprimirTabelaDispersao("alunos.dat");
+                break;
+        }
+    }
+    fclose(a);
+}
