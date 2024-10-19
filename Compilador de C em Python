@@ -1,0 +1,202 @@
+import sys
+import re
+import subprocess
+import os
+
+caracteres_finais = [';', ',', r'\)', r'\(', r'\]', r'\[', r'\}', r'\{']
+operadores = ['=', '<', '>', '!', r'\+', '-', r'\*', '/', '%', '&', r'\|', r'\^', '<<', '>>']
+
+def remover_comentarios(line, file):
+    if '//' in line:
+        line = line.split('//')[0]
+
+    while '/*' in line:
+        antes_str = line.split('/*')[0]
+        linha_comentario = line.split('/*')[1]
+
+        while '*/' not in linha_comentario:
+            linha_comentario += '\n' + file.readline()
+
+        depois_str = linha_comentario.split('*/')[1]
+        line = antes_str + depois_str
+
+    return line
+
+def expandir_includes(arquivo, arquivo_temp):
+    try:
+        subprocess.run(['gcc', '-E', arquivo, '-o', arquivo_temp], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Erro ao expandir includes: {e}")
+
+def const_def(line): #se o define for constante
+    partes = line.split()
+    if len(partes) > 2:
+        return {partes[1]: partes[2]}
+    return {}
+
+def func_def(line): #se o define for uma função
+    partes = re.split(r'\s*\(\s*', line, maxsplit=1)
+    if len(partes) < 2:
+        return {}
+
+    macro_name = partes[0].split()[1]
+    restante = partes[1]
+
+    partes = re.split(r'\)\s*', restante, maxsplit=1)
+    if len(partes) < 2:
+        return {}
+
+    macro_args = partes[0].split(',')
+    macro_body = partes[1].strip()
+
+    return {macro_name: (macro_args, macro_body)}
+
+def tem_def(line, dicio, macros):
+    pattern = r'\b(' + '|'.join(re.escape(k) for k in dicio.keys()) + r')\b'
+    line = re.sub(pattern, lambda m: dicio.get(m.group(0), m.group(0)), line)
+
+    for macro_name, (macro_args, macro_body) in macros.items():
+        pattern = r'\b' + re.escape(macro_name) + r'\s*\(([^)]*)\)'
+        line = re.sub(pattern, lambda m: substituir_macro(m, macro_args, macro_body), line)
+
+    return line
+
+def substituir_macro(match, macro_args, macro_body):
+    args_chamada = [arg.strip() for arg in match.group(1).split(',')]
+    corpo = macro_body
+    for i, arg in enumerate(macro_args):
+        pattern = r'\b' + re.escape(arg.strip()) + r'\b'
+        corpo = re.sub(pattern, args_chamada[i], corpo)
+    return corpo
+
+def conta_chave(line):
+    return line.count('{') - line.count('}')
+
+def eh_funcao(line):
+    pattern = r'^\s*([a-zA-Z_][a-zA-Z0-9_]*\s*\*?\s*)+\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(([^)]*)\)\s*\{'
+    return re.match(pattern, line) is not None
+
+def eh_struct(line):
+    pattern = r'^\s*(typedef\s+)?(struct|union)\s+[a-zA-Z_][a-zA-Z0-9_]*\s*\{'
+    return re.match(pattern, line) is not None
+
+def processar_linha(line):
+    partes = re.split(r'(\".*?\")', line)
+    for i, parte in enumerate(partes):
+        if not parte.startswith('"'):
+            parte = parte.strip()
+            parte = ' '.join(parte.split())
+
+            for char in caracteres_finais:
+                pattern = f'\\s*{char}\\s*'
+                parte = re.sub(pattern, char.replace('\\', ''), parte)
+
+            for op in operadores:
+                pattern = f'\\s*{op}\\s*'
+                parte = re.sub(pattern, op.replace('\\', ''), parte)
+
+        partes[i] = parte
+    return ''.join(partes)
+
+def encontrar_primeira_linha_codigo(arquivo_entrada):
+    with open(arquivo_entrada, 'r') as file:
+        for line in file:
+            line = remover_comentarios(line, file).strip()
+            if not line.startswith('#') and line:
+                return processar_linha(line)
+    return None
+
+def encontrar_linha_correspondente(primeira_linha, arquivo_temp):
+    with open(arquivo_temp, 'r') as file:
+        for line in file:
+            if processar_linha(line).strip() == primeira_linha:
+                return processar_linha(line).strip()
+    return None
+
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print("Uso: python script.py <arquivo_entrada.c> <arquivo_saida.c>")
+        sys.exit(1)
+
+    arquivo_entrada = sys.argv[1]
+    arquivo_saida = sys.argv[2]
+    arquivo_temp = "temp_expanded.c"
+
+    expandir_includes(arquivo_entrada, arquivo_temp)
+    primeira_linha_codigo = encontrar_primeira_linha_codigo(arquivo_entrada)
+    linha_correspondente = encontrar_linha_correspondente(primeira_linha_codigo, arquivo_temp)
+
+    with open(arquivo_temp, 'r') as file, open(arquivo_saida, 'w') as processado:
+        dentro_codigo = False
+        dentro_main = False
+        dentro_struct = False
+        dentro_fun = False
+        chaves_abertas = 0
+        dicio = {}
+        macros = {}
+
+        for line in file:
+            if dentro_codigo or processar_linha(line).strip() == linha_correspondente:
+                if processar_linha(line).strip() == linha_correspondente:
+                    dentro_codigo = True
+                line = remover_comentarios(line, file).strip()
+                if '#define' in line:
+                    if '(' in line:
+                        macro_dic = func_def(line)
+                        macros.update(macro_dic)
+                    else:
+                        novo_dic = const_def(line)
+                        dicio.update(novo_dic)
+                    continue
+
+                line = tem_def(line, dicio, macros)
+
+                if eh_funcao(line) or eh_struct(line):
+                    if dentro_fun or dentro_struct:
+                        processado.write('\n')
+                    if eh_funcao(line):
+                        dentro_fun = True
+                        dentro_struct = False
+                    else:
+                        dentro_struct = True
+                        dentro_fun = False
+                    chaves_abertas += conta_chave(line)
+                    line = processar_linha(line).replace('\n', '').replace('\t', '')
+                    processado.write(line)
+                    continue
+
+                if dentro_fun or dentro_struct:
+                    chaves_abertas += conta_chave(line)
+                    line = processar_linha(line).replace('\n', '').replace('\t', '')
+                    processado.write(line)
+                    if chaves_abertas == 0:
+                        processado.write('\n')
+                        dentro_fun = False
+                        dentro_struct = False
+                    continue
+
+                if 'int main' in line:
+                    dentro_main = True
+                    chaves_abertas = 1
+                    line = processar_linha(line).replace('\n', '').replace('\t', '')
+                    processado.write(line)
+                    continue
+
+                if dentro_main:
+                    chaves_abertas += conta_chave(line)
+                    line = processar_linha(line).replace('\n', '').replace('\t', '')
+                    processado.write(line)
+                    if chaves_abertas == 0:
+                        if dentro_main:
+                            processado.write('\n')
+                        dentro_main = False
+                    continue
+
+                line = processar_linha(line).replace('\n', '').replace('\t', '')
+                processado.write(line)
+            else:
+                if line.strip():
+                    processado.write(line.replace('\t', ''))
+
+
+    os.remove(arquivo_temp)
